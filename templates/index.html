@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>SmartApply</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}header{background:#161b22;border-bottom:1px solid #30363d;padding:1rem 2rem}header h1{font-size:20px;font-weight:700}header p{font-size:13px;color:#8b949e;margin-top:2px}main{padding:2rem;max-width:900px;margin:0 auto}.ig{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1rem}.fl{font-size:12px;color:#8b949e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}textarea{width:100%;height:200px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;color:#e6edf3;font-size:13px;resize:vertical;font-family:inherit;line-height:1.6}textarea:focus{outline:none;border-color:#58a6ff}.row{display:flex;gap:12px;margin-bottom:1.5rem}input[type=text]{flex:1;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:13px}input[type=text]:focus{outline:none;border-color:#58a6ff}.btn{padding:10px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none}.bp{background:#238636;color:#fff}.bs{background:#21262d;color:#e6edf3;border:1px solid #30363d}.sc{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:2rem}.circle{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0}.hi{background:#1a4721;color:#3fb950;border:2px solid #238636}.mi{background:#2d2a0e;color:#d29922;border:2px solid #9e6a03}.lo{background:#2d1b1b;color:#f85149;border:2px solid #da3633}.tc{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1rem}.lc{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1.25rem}.lt{font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}.tag{display:inline-block;font-size:11px;padding:3px 8px;border-radius:20px;margin:2px}.mk{background:#1a4721;color:#3fb950;border:1px solid #238636}.ms{background:#2d1b2e;color:#f0883e;border:1px solid #bd561d}.bl{list-style:none}.bl li{font-size:13px;padding:4px 0;border-bottom:1px solid #21262d;line-height:1.5}.bl li:last-child{border-bottom:none}.bl li::before{content:"*";color:#58a6ff;margin-right:8px}.cv{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1.5rem;margin-bottom:1rem}.ct{font-size:14px;line-height:1.8;white-space:pre-wrap}.ld{text-align:center;padding:2rem;color:#8b949e;display:none}.er{background:#2d1b1b;border:1px solid #f85149;color:#f85149;border-radius:8px;padding:12px;margin-bottom:1rem;display:none;font-size:13px}.stt{font-size:15px;font-weight:600;margin-bottom:1rem;margin-top:1.5rem}</style></head>
+<body>
+<header><h1>SmartApply</h1><p>Paste a job description and resume, get a match score and cover letter</p></header>
+<main>
+<div class="ig">
+<div><div class="fl">Your Resume</div><textarea id="resume" placeholder="Paste your resume..."></textarea></div>
+<div><div class="fl">Job Description</div><textarea id="job" placeholder="Paste the job description..."></textarea></div>
+</div>
+<div class="row">
+<input type="text" id="company" placeholder="Company name"/>
+<input type="text" id="role" placeholder="Role title"/>
+<button class="btn bp" onclick="analyze()">Analyze Match</button>
+<button class="btn bs" onclick="genCover()">Cover Letter</button>
+</div>
+<div class="er" id="err"></div>
+<div class="ld" id="ld">Analyzing with Claude...</div>
+<div id="results" style="display:none">
+<div class="sc"><div class="circle" id="circ">-</div><div><div style="font-size:15px;font-weight:500;" id="verdict"></div><div style="font-size:13px;color:#8b949e;" id="slabel"></div></div></div>
+<div class="tc">
+<div class="lc"><div class="lt">Matched</div><div id="mk"></div></div>
+<div class="lc"><div class="lt">Missing</div><div id="ms"></div></div>
+</div>
+<div class="tc">
+<div class="lc"><div class="lt">Strengths</div><ul class="bl" id="str"></ul></div>
+<div class="lc"><div class="lt">Gaps</div><ul class="bl" id="gaps"></ul></div>
+</div>
+</div>
+<div id="cvSec" style="display:none"><div class="stt">Cover Letter</div><div class="cv"><div class="ct" id="cvt"></div><button class="btn bs" style="margin-top:1rem" onclick="copy()">Copy</button></div></div>
+</main>
+<script>
+function err(m){const b=document.getElementById("err");b.textContent=m;b.style.display="block";setTimeout(()=>b.style.display="none",5000);}
+function ld(s,m){const b=document.getElementById("ld");b.textContent=m||"Loading...";b.style.display=s?"block":"none";}
+async function analyze(){
+const resume=document.getElementById("resume").value.trim();
+const job=document.getElementById("job").value.trim();
+if(!resume||!job){err("Paste both resume and job description.");return;}
+ld(true,"Analyzing with Claude...");
+document.getElementById("results").style.display="none";
+try{
+const res=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resume,job_description:job})});
+const d=await res.json();
+if(d.error){err(d.error);return;}
+const s=d.match_score;
+const c=document.getElementById("circ");
+c.textContent=s+"%";
+c.className="circle "+(s>=70?"hi":s>=45?"mi":"lo");
+document.getElementById("verdict").textContent=d.verdict;
+document.getElementById("slabel").textContent=s>=70?"Strong match":s>=45?"Moderate match":"Weak match";
+document.getElementById("mk").innerHTML=d.matched_keywords.map(k=>'<span class="tag mk">'+k+"</span>").join("");
+document.getElementById("ms").innerHTML=d.missing_keywords.map(k=>'<span class="tag ms">'+k+"</span>").join("");
+document.getElementById("str").innerHTML=d.strengths.map(s=>"<li>"+s+"</li>").join("");
+document.getElementById("gaps").innerHTML=d.gaps.map(g=>"<li>"+g+"</li>").join("");
+document.getElementById("results").style.display="block";
+}catch(e){err("Error: "+e.message);}finally{ld(false);}
+}
+async function genCover(){
+const resume=document.getElementById("resume").value.trim();
+const job=document.getElementById("job").value.trim();
+const company=document.getElementById("company").value.trim()||"the company";
+const role=document.getElementById("role").value.trim()||"this role";
+if(!resume||!job){err("Paste both fields.");return;}
+ld(true,"Writing cover letter...");
+document.getElementById("cvSec").style.display="none";
+try{
+const res=await fetch("/api/cover-letter",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resume,job_description:job,company,role})});
+const d=await res.json();
+if(d.error){err(d.error);return;}
+document.getElementById("cvt").textContent=d.cover_letter;
+document.getElementById("cvSec").style.display="block";
+}catch(e){err("Error: "+e.message);}finally{ld(false);}
+}
+function copy(){navigator.clipboard.writeText(document.getElementById("cvt").textContent).then(()=>{const b=document.querySelector(".cv button");b.textContent="Copied!";setTimeout(()=>b.textContent="Copy",2000);});}
+</script>
+</body></html>
