@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,115 +6,189 @@
   <title>SmartApply</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
-    header { background: #161b22; border-bottom: 1px solid #30363d; padding: 1rem 2rem; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: #161b22; border-bottom: 1px solid #30363d; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
     header h1 { font-size: 20px; font-weight: 700; }
     header p { font-size: 13px; color: #8b949e; margin-top: 2px; }
-    main { padding: 2rem; max-width: 900px; margin: 0 auto; }
-    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1rem; }
-    .field-label { font-size: 12px; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    textarea { width: 100%; height: 200px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; color: #e6edf3; font-size: 13px; resize: vertical; font-family: inherit; line-height: 1.6; }
-    textarea:focus { outline: none; border-color: #58a6ff; }
-    .row { display: flex; gap: 12px; margin-bottom: 1.5rem; }
-    input[type=text] { flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 8px 12px; color: #e6edf3; font-size: 13px; }
-    input[type=text]:focus { outline: none; border-color: #58a6ff; }
-    .btn { padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
-    .btn-primary { background: #238636; color: #fff; }
-    .btn-primary:hover { background: #2ea043; }
-    .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
-    .btn-secondary:hover { background: #30363d; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .results { display: none; }
+    main { flex: 1; padding: 2rem; max-width: 960px; margin: 0 auto; width: 100%; }
+
+    /* INPUT SECTION */
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 1.25rem; }
+    .input-panel { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; }
+    .panel-tabs { display: flex; border-bottom: 1px solid #30363d; }
+    .tab { flex: 1; padding: 10px; font-size: 13px; text-align: center; cursor: pointer; color: #8b949e; background: transparent; border: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab.active { color: #e6edf3; border-bottom-color: #58a6ff; }
+    .tab:hover { color: #e6edf3; }
+    .panel-body { padding: 1rem; }
+    textarea { width: 100%; height: 200px; background: transparent; border: none; color: #e6edf3; font-size: 13px; resize: vertical; font-family: inherit; line-height: 1.6; outline: none; }
+    .url-input { display: flex; gap: 8px; }
+    .url-input input { flex: 1; background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #e6edf3; font-size: 13px; outline: none; }
+    .url-input input:focus { border-color: #58a6ff; }
+    .fetch-btn { background: #21262d; border: 1px solid #30363d; color: #e6edf3; padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .fetch-btn:hover { background: #30363d; }
+
+    /* DROP ZONE */
+    .drop-zone { border: 2px dashed #30363d; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; color: #8b949e; font-size: 13px; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #58a6ff; background: #1f3a5f22; color: #e6edf3; }
+    .drop-zone input[type=file] { display: none; }
+    .drop-zone .icon { font-size: 28px; margin-bottom: 8px; }
+    .file-selected { background: #1a4721; border: 1px solid #238636; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #3fb950; margin-top: 8px; display: none; }
+
+    /* TEXT PREVIEW */
+    .text-preview { font-size: 12px; color: #8b949e; background: #21262d; border-radius: 6px; padding: 8px; max-height: 80px; overflow-y: auto; margin-top: 8px; display: none; line-height: 1.5; }
+
+    /* ACTION ROW */
+    .action-row { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .action-row input { flex: 1; min-width: 150px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 9px 12px; color: #e6edf3; font-size: 13px; outline: none; }
+    .action-row input:focus { border-color: #58a6ff; }
+    .btn { padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.2s; }
+    .btn-green { background: #238636; color: #fff; }
+    .btn-green:hover { opacity: 0.85; }
+    .btn-gray { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+    .btn-gray:hover { background: #30363d; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* STATUS */
+    .status { font-size: 13px; color: #8b949e; padding: 10px 0; display: none; }
+    .error-box { background: #2d1b1b; border: 1px solid #f85149; color: #f85149; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; display: none; font-size: 13px; }
+
+    /* RESULTS */
     .score-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 2rem; }
     .score-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; flex-shrink: 0; }
-    .score-high { background: #1a4721; color: #3fb950; border: 2px solid #238636; }
-    .score-mid { background: #2d2a0e; color: #d29922; border: 2px solid #9e6a03; }
-    .score-low { background: #2d1b1b; color: #f85149; border: 2px solid #da3633; }
-    .verdict { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+    .high { background: #1a4721; color: #3fb950; border: 2px solid #238636; }
+    .mid { background: #2d2a0e; color: #d29922; border: 2px solid #9e6a03; }
+    .low { background: #2d1b1b; color: #f85149; border: 2px solid #da3633; }
+    .verdict { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1rem; }
     .list-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.25rem; }
-    .list-title { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .list-title { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
     .tag { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 20px; margin: 2px; }
-    .tag.match { background: #1a4721; color: #3fb950; border: 1px solid #238636; }
-    .tag.miss { background: #2d1b2e; color: #f0883e; border: 1px solid #bd561d; }
+    .tag-green { background: #1a4721; color: #3fb950; border: 1px solid #238636; }
+    .tag-orange { background: #2d1b2e; color: #f0883e; border: 1px solid #bd561d; }
     .bullet-list { list-style: none; }
-    .bullet-list li { font-size: 13px; color: #e6edf3; padding: 4px 0; border-bottom: 1px solid #21262d; line-height: 1.5; }
+    .bullet-list li { font-size: 13px; color: #e6edf3; padding: 5px 0; border-bottom: 1px solid #21262d; line-height: 1.5; padding-left: 14px; position: relative; }
     .bullet-list li:last-child { border-bottom: none; }
-    .bullet-list li::before { content: "•"; color: #58a6ff; margin-right: 8px; }
+    .bullet-list li::before { content: ''; position: absolute; left: 0; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: #58a6ff; }
     .cover-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; }
-    .cover-text { font-size: 14px; line-height: 1.8; color: #e6edf3; white-space: pre-wrap; }
-    .copy-btn { margin-top: 1rem; }
-    .loading { text-align: center; padding: 2rem; color: #8b949e; display: none; }
-    .error { background: #2d1b1b; border: 1px solid #f85149; color: #f85149; border-radius: 8px; padding: 12px; margin-bottom: 1rem; display: none; font-size: 13px; }
-    .section-title { font-size: 15px; font-weight: 600; margin-bottom: 1rem; margin-top: 1.5rem; }
-    footer { background: #161b22; border-top: 1px solid #30363d; padding: 1rem 2rem; text-align: center; font-size: 13px; color: #8b949e; margin-top: 2rem; }
+    .cover-text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: #e6edf3; }
+    .section-label { font-size: 15px; font-weight: 600; margin: 1.5rem 0 1rem; }
+
+    /* FOOTER */
+    footer { background: #161b22; border-top: 1px solid #30363d; padding: 1rem 2rem; text-align: center; font-size: 13px; color: #8b949e; }
     footer a { color: #58a6ff; text-decoration: none; }
     footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 700px) {
+      .input-grid { grid-template-columns: 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+      .action-row { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>SmartApply</h1>
-    <p>Paste a job description and your resume — get an AI match score, gap analysis, and cover letter</p>
+    <div>
+      <h1>SmartApply</h1>
+      <p>Upload your resume PDF and paste a job link — get an AI match score and cover letter</p>
+    </div>
   </header>
+
   <main>
     <div class="input-grid">
-      <div>
-        <div class="field-label">Your Resume</div>
-        <textarea id="resume" placeholder="Paste your resume text here..."></textarea>
-      </div>
-      <div>
-        <div class="field-label">Job Description</div>
-        <textarea id="jobDesc" placeholder="Paste the job description here..."></textarea>
-      </div>
-    </div>
-    <div class="row">
-      <input type="text" id="company" placeholder="Company name (e.g. Google)" />
-      <input type="text" id="role" placeholder="Role (e.g. Software Engineer)" />
-      <button class="btn btn-primary" onclick="analyze()">Analyze Match</button>
-      <button class="btn btn-secondary" onclick="generateCoverLetter()">Generate Cover Letter</button>
-    </div>
 
-    <div class="error" id="errorBox"></div>
-    <div class="loading" id="loadingBox">Analyzing with Claude AI...</div>
-
-    <div class="results" id="results">
-      <div class="score-card">
-        <div class="score-circle" id="scoreCircle">—</div>
-        <div>
-          <div class="verdict" id="verdict"></div>
-          <div style="font-size:13px; color:#8b949e;" id="scoreLabel"></div>
+      <!-- RESUME PANEL -->
+      <div class="input-panel">
+        <div class="panel-tabs">
+          <button class="tab active" onclick="switchTab('resume', 'pdf', this)">Upload PDF</button>
+          <button class="tab" onclick="switchTab('resume', 'paste', this)">Paste Text</button>
+        </div>
+        <div class="panel-body">
+          <div id="resume-pdf">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+              <input type="file" id="pdfInput" accept=".pdf" onchange="handleFileSelect(event)" />
+              <div class="icon">📄</div>
+              <div>Drop your resume PDF here or <strong>click to browse</strong></div>
+              <div style="font-size:11px; margin-top:4px;">PDF files only, max 5MB</div>
+            </div>
+            <div class="file-selected" id="fileSelected"></div>
+            <div class="text-preview" id="pdfPreview"></div>
+          </div>
+          <div id="resume-paste" style="display:none;">
+            <textarea id="resumeText" placeholder="Paste your resume text here..."></textarea>
+          </div>
         </div>
       </div>
 
+      <!-- JOB PANEL -->
+      <div class="input-panel">
+        <div class="panel-tabs">
+          <button class="tab active" onclick="switchTab('job', 'url', this)">Job URL</button>
+          <button class="tab" onclick="switchTab('job', 'paste', this)">Paste Text</button>
+        </div>
+        <div class="panel-body">
+          <div id="job-url">
+            <div class="url-input">
+              <input type="text" id="jobUrl" placeholder="https://jobs.company.com/posting/..." />
+              <button class="fetch-btn" onclick="fetchJob()">Fetch</button>
+            </div>
+            <div class="text-preview" id="jobPreview"></div>
+          </div>
+          <div id="job-paste" style="display:none;">
+            <textarea id="jobText" placeholder="Paste the job description here..."></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ACTION ROW -->
+    <div class="action-row">
+      <input type="text" id="company" placeholder="Company name" />
+      <input type="text" id="role" placeholder="Role title" />
+      <button class="btn btn-green" onclick="analyze()">Analyze Match</button>
+      <button class="btn btn-gray" onclick="genCover()">Cover Letter</button>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+    <div class="status" id="statusBox">Analyzing with Claude AI...</div>
+
+    <!-- RESULTS -->
+    <div id="results" style="display:none;">
+      <div class="score-card">
+        <div class="score-circle" id="scoreCircle">-</div>
+        <div>
+          <div class="verdict" id="verdict"></div>
+          <div style="font-size:13px;color:#8b949e;" id="scoreLabel"></div>
+        </div>
+      </div>
       <div class="two-col">
         <div class="list-card">
           <div class="list-title">Matched Keywords</div>
-          <div id="matchedKeywords"></div>
+          <div id="matched"></div>
         </div>
         <div class="list-card">
           <div class="list-title">Missing Keywords</div>
-          <div id="missingKeywords"></div>
+          <div id="missing"></div>
         </div>
       </div>
-
       <div class="two-col">
         <div class="list-card">
           <div class="list-title">Strengths</div>
           <ul class="bullet-list" id="strengths"></ul>
         </div>
         <div class="list-card">
-          <div class="list-title">Gaps to Address</div>
+          <div class="list-title">Gaps</div>
           <ul class="bullet-list" id="gaps"></ul>
         </div>
       </div>
     </div>
 
-    <div id="coverLetterSection" style="display:none;">
-      <div class="section-title">Cover Letter</div>
+    <!-- COVER LETTER -->
+    <div id="coverSection" style="display:none;">
+      <div class="section-label">Cover Letter</div>
       <div class="cover-card">
         <div class="cover-text" id="coverText"></div>
-        <button class="btn btn-secondary copy-btn" onclick="copyLetter()">Copy to clipboard</button>
+        <button class="btn btn-gray" style="margin-top:1rem;" onclick="copyLetter()">Copy</button>
       </div>
     </div>
   </main>
@@ -125,32 +198,112 @@
   </footer>
 
   <script>
-    function showError(msg) {
-      const box = document.getElementById('errorBox');
-      box.textContent = msg;
-      box.style.display = 'block';
-      setTimeout(() => box.style.display = 'none', 5000);
+    // State
+    let resumeMode = 'pdf';
+    let jobMode = 'url';
+    let extractedResumeText = '';
+    let extractedJobText = '';
+
+    // Tab switching
+    function switchTab(panel, mode, el) {
+      const tabs = el.parentElement.querySelectorAll('.tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+
+      if (panel === 'resume') {
+        resumeMode = mode;
+        document.getElementById('resume-pdf').style.display = mode === 'pdf' ? 'block' : 'none';
+        document.getElementById('resume-paste').style.display = mode === 'paste' ? 'block' : 'none';
+      } else {
+        jobMode = mode;
+        document.getElementById('job-url').style.display = mode === 'url' ? 'block' : 'none';
+        document.getElementById('job-paste').style.display = mode === 'paste' ? 'block' : 'none';
+      }
     }
 
-    function setLoading(show, msg) {
-      const box = document.getElementById('loadingBox');
-      box.textContent = msg || 'Analyzing with Claude AI...';
-      box.style.display = show ? 'block' : 'none';
+    // Drag and drop
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.add('dragover');
+    }
+    function handleDragLeave(e) {
+      document.getElementById('dropZone').classList.remove('dragover');
+    }
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    }
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (file) processFile(file);
+    }
+
+    async function processFile(file) {
+      if (!file.name.endsWith('.pdf')) { showError('Please upload a PDF file.'); return; }
+      showStatus('Extracting text from PDF...');
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/extract-pdf', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) { showError(data.error); return; }
+        extractedResumeText = data.text;
+        document.getElementById('fileSelected').style.display = 'block';
+        document.getElementById('fileSelected').textContent = 'Extracted: ' + file.name;
+        const preview = document.getElementById('pdfPreview');
+        preview.style.display = 'block';
+        preview.textContent = data.text.substring(0, 300) + '...';
+        showStatus('');
+      } catch(e) { showError('Error extracting PDF: ' + e.message); }
+    }
+
+    async function fetchJob() {
+      const url = document.getElementById('jobUrl').value.trim();
+      if (!url) { showError('Please enter a job posting URL.'); return; }
+      showStatus('Fetching job posting...');
+      try {
+        const res = await fetch('/api/scrape-job', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.error) { showError(data.error); return; }
+        extractedJobText = data.text;
+        const preview = document.getElementById('jobPreview');
+        preview.style.display = 'block';
+        preview.textContent = data.text.substring(0, 300) + '...';
+        showStatus('Job posting fetched!');
+        setTimeout(() => showStatus(''), 2000);
+      } catch(e) { showError('Error fetching job: ' + e.message); }
+    }
+
+    function getResume() {
+      if (resumeMode === 'pdf') return extractedResumeText;
+      return document.getElementById('resumeText').value.trim();
+    }
+
+    function getJob() {
+      if (jobMode === 'url') return extractedJobText;
+      return document.getElementById('jobText').value.trim();
     }
 
     async function analyze() {
-      const resume = document.getElementById('resume').value.trim();
-      const jobDesc = document.getElementById('jobDesc').value.trim();
-      if (!resume || !jobDesc) { showError('Please paste both your resume and the job description.'); return; }
+      const resume = getResume();
+      const job = getJob();
+      if (!resume) { showError('Please upload your resume PDF or paste your resume text.'); return; }
+      if (!job) { showError('Please fetch a job URL or paste the job description.'); return; }
 
-      setLoading(true, 'Analyzing with Claude AI...');
+      showStatus('Analyzing with Claude AI...');
       document.getElementById('results').style.display = 'none';
 
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resume, job_description: jobDesc })
+          body: JSON.stringify({ resume, job_description: job })
         });
         const data = await res.json();
         if (data.error) { showError(data.error); return; }
@@ -158,57 +311,64 @@
         const score = data.match_score;
         const circle = document.getElementById('scoreCircle');
         circle.textContent = score + '%';
-        circle.className = 'score-circle ' + (score >= 70 ? 'score-high' : score >= 45 ? 'score-mid' : 'score-low');
+        circle.className = 'score-circle ' + (score >= 70 ? 'high' : score >= 45 ? 'mid' : 'low');
         document.getElementById('verdict').textContent = data.verdict;
-        document.getElementById('scoreLabel').textContent = score >= 70 ? 'Strong match' : score >= 45 ? 'Moderate match' : 'Weak match — review gaps below';
-
-        document.getElementById('matchedKeywords').innerHTML = data.matched_keywords.map(k => `<span class="tag match">${k}</span>`).join('');
-        document.getElementById('missingKeywords').innerHTML = data.missing_keywords.map(k => `<span class="tag miss">${k}</span>`).join('');
-        document.getElementById('strengths').innerHTML = data.strengths.map(s => `<li>${s}</li>`).join('');
-        document.getElementById('gaps').innerHTML = data.gaps.map(g => `<li>${g}</li>`).join('');
-
+        document.getElementById('scoreLabel').textContent = score >= 70 ? 'Strong match' : score >= 45 ? 'Moderate match' : 'Weak match';
+        document.getElementById('matched').innerHTML = data.matched_keywords.map(k => '<span class="tag tag-green">' + k + '</span>').join('');
+        document.getElementById('missing').innerHTML = data.missing_keywords.map(k => '<span class="tag tag-orange">' + k + '</span>').join('');
+        document.getElementById('strengths').innerHTML = data.strengths.map(s => '<li>' + s + '</li>').join('');
+        document.getElementById('gaps').innerHTML = data.gaps.map(g => '<li>' + g + '</li>').join('');
         document.getElementById('results').style.display = 'block';
-      } catch(e) {
-        showError('Something went wrong: ' + e.message);
-      } finally {
-        setLoading(false);
-      }
+        showStatus('');
+      } catch(e) { showError('Error: ' + e.message); }
     }
 
-    async function generateCoverLetter() {
-      const resume = document.getElementById('resume').value.trim();
-      const jobDesc = document.getElementById('jobDesc').value.trim();
+    async function genCover() {
+      const resume = getResume();
+      const job = getJob();
       const company = document.getElementById('company').value.trim() || 'the company';
       const role = document.getElementById('role').value.trim() || 'this role';
-      if (!resume || !jobDesc) { showError('Please paste both your resume and the job description.'); return; }
+      if (!resume) { showError('Please upload your resume PDF or paste your resume text.'); return; }
+      if (!job) { showError('Please fetch a job URL or paste the job description.'); return; }
 
-      setLoading(true, 'Writing your cover letter...');
-      document.getElementById('coverLetterSection').style.display = 'none';
+      showStatus('Writing your cover letter...');
+      document.getElementById('coverSection').style.display = 'none';
 
       try {
         const res = await fetch('/api/cover-letter', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resume, job_description: jobDesc, company, role })
+          body: JSON.stringify({ resume, job_description: job, company, role })
         });
         const data = await res.json();
         if (data.error) { showError(data.error); return; }
         document.getElementById('coverText').textContent = data.cover_letter;
-        document.getElementById('coverLetterSection').style.display = 'block';
-      } catch(e) {
-        showError('Something went wrong: ' + e.message);
-      } finally {
-        setLoading(false);
-      }
+        document.getElementById('coverSection').style.display = 'block';
+        showStatus('');
+      } catch(e) { showError('Error: ' + e.message); }
     }
 
     function copyLetter() {
-      const text = document.getElementById('coverText').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = document.querySelector('.copy-btn');
+      navigator.clipboard.writeText(document.getElementById('coverText').textContent).then(() => {
+        const btn = document.querySelector('.cover-card .btn');
         btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy to clipboard', 2000);
+        setTimeout(() => btn.textContent = 'Copy', 2000);
       });
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = msg;
+      box.style.display = 'block';
+      document.getElementById('statusBox').style.display = 'none';
+      setTimeout(() => box.style.display = 'none', 5000);
+    }
+
+    function showStatus(msg) {
+      const box = document.getElementById('statusBox');
+      if (msg) { box.textContent = msg; box.style.display = 'block'; }
+      else { box.style.display = 'none'; }
+      document.getElementById('errorBox').style.display = 'none';
     }
   </script>
 </body>
