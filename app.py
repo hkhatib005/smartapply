@@ -1,45 +1,140 @@
 import os
+import io
 import json
 import requests
 from flask import Flask, request, jsonify, render_template
 from datetime import datetime
+from pypdf import PdfReader
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max
 
-def claude(prompt):
-    if not ANTHROPIC_KEY: return "Set ANTHROPIC_API_KEY to enable AI."
-    h = {"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"}
-    b = {"model":"claude-sonnet-4-6","max_tokens":1024,"messages":[{"role":"user","content":prompt}]}
-    r = requests.post("https://api.anthropic.com/v1/messages",headers=h,json=b)
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+def call_claude(prompt):
+    if not ANTHROPIC_KEY:
+        return "Set ANTHROPIC_API_KEY to enable AI features."
+    headers = {
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
+    body = {
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 1500,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    r = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
     return r.json()["content"][0]["text"]
 
-@app.route("/")
-def index(): return render_template("index.html")
+def extract_pdf_text(file_bytes):
+    reader = PdfReader(io.BytesIO(file_bytes))
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() or ""
+    return text.strip()
 
-@app.route("/api/analyze",methods=["POST"])
-def analyze():
-    d = request.get_json()
-    resume = d.get("resume","").strip()
-    job = d.get("job_description","").strip()
-    if not resume or not job: return jsonify({"error":"Both fields required"}),400
-    prompt = f"""Analyze the match between this resume and job description.\n\nRESUME:\n{resume}\n\nJOB DESCRIPTION:\n{job}\n\nReturn raw JSON only (no markdown, no backticks):\n{{\n  \"match_score\": <0-100>,\n  \"matched_keywords\": [<keywords in both>],\n  \"missing_keywords\": [<important missing keywords>],\n  \"strengths\": [<2-3 strengths>],\n  \"gaps\": [<2-3 gaps>],\n  \"verdict\": \"<one sentence>\"\n}}"""
+def scrape_job_url(url):
     try:
-        raw = claude(prompt).strip().replace("```json","").replace("```","").strip()
-        return jsonify(json.loads(raw))
-    except Exception as e: return jsonify({"error":str(e)}),500
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        r = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(r.text, "html.parser")
+        # Remove scripts and styles
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n", strip=True)
+        # Trim to first 4000 chars to keep it relevant
+        return text[:4000]
+    except Exception as e:
+        return f"Could not scrape URL: {str(e)}"
 
-@app.route("/api/cover-letter",methods=["POST"])
-def cover():
-    d = request.get_json()
-    resume=d.get("resume","").strip(); job=d.get("job_description","").strip()
-    company=d.get("company","the company"); role=d.get("role","this role")
-    prompt = f"Write a concise 3-paragraph cover letter for this candidate applying to {role} at {company}. Sound human, not like a template. Be direct.\n\nRESUME:\n{resume}\n\nJOB DESCRIPTION:\n{job}"
-    try: return jsonify({"cover_letter":claude(prompt)})
-    except Exception as e: return jsonify({"error":str(e)}),500
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/api/extract-pdf", methods=["POST"])
+def extract_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files["file"]
+    if not file.filename.endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported"}), 400
+    try:
+        text = extract_pdf_text(file.read())
+        if not text:
+            return jsonify({"error": "Could not extract text from PDF"}), 400
+        return jsonify({"text": text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/scrape-job", methods=["POST"])
+def scrape_job():
+    data = request.get_json()
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    text = scrape_job_url(url)
+    return jsonify({"text": text})
+
+@app.route("/api/analyze", methods=["POST"])
+def analyze():
+    data = request.get_json()
+    resume = data.get("resume", "").strip()
+    job_desc = data.get("job_description", "").strip()
+    if not resume or not job_desc:
+        return jsonify({"error": "Both resume and job description are required"}), 400
+
+    prompt = f"""Analyze the match between this resume and job description.
+
+RESUME:
+{resume}
+
+JOB DESCRIPTION:
+{job_desc}
+
+Return raw JSON only (no markdown, no backticks):
+{{
+  "match_score": <0-100>,
+  "matched_keywords": [<keywords in both>],
+  "missing_keywords": [<important missing keywords>],
+  "strengths": [<2-3 specific strengths>],
+  "gaps": [<2-3 specific gaps>],
+  "verdict": "<one sentence summary>"
+}}"""
+
+    try:
+        raw = call_claude(prompt).strip().replace("```json", "").replace("```", "").strip()
+        return jsonify(json.loads(raw))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/cover-letter", methods=["POST"])
+def cover_letter():
+    data = request.get_json()
+    resume = data.get("resume", "").strip()
+    job_desc = data.get("job_description", "").strip()
+    company = data.get("company", "the company").strip()
+    role = data.get("role", "this role").strip()
+
+    prompt = f"""Write a concise 3-paragraph cover letter for this candidate applying to {role} at {company}.
+Sound human and direct. No cliche openers. Reference specifics from both the resume and job description.
+
+RESUME:
+{resume}
+
+JOB DESCRIPTION:
+{job_desc}"""
+
+    try:
+        return jsonify({"cover_letter": call_claude(prompt)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/health")
-def health(): return jsonify({"status":"ok","ai":bool(ANTHROPIC_KEY),"ts":datetime.utcnow().isoformat()})
+def health():
+    return jsonify({"status": "ok", "ai_enabled": bool(ANTHROPIC_KEY), "timestamp": datetime.utcnow().isoformat()})
 
-if __name__=="__main__":
-    app.run(host="0.0.0.0",port=int(os.environ.get("PORT",5000)),debug=False)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
