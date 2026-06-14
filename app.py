@@ -5,7 +5,6 @@ import requests
 from flask import Flask, request, jsonify, render_template
 from datetime import datetime
 from pypdf import PdfReader
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max
@@ -35,20 +34,6 @@ def extract_pdf_text(file_bytes):
         text += page.extract_text() or ""
     return text.strip()
 
-def scrape_job_url(url):
-    try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, "html.parser")
-        # Remove scripts and styles
-        for tag in soup(["script", "style", "nav", "footer", "header"]):
-            tag.decompose()
-        text = soup.get_text(separator="\n", strip=True)
-        # Trim to first 4000 chars to keep it relevant
-        return text[:4000]
-    except Exception as e:
-        return f"Could not scrape URL: {str(e)}"
-
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -67,15 +52,6 @@ def extract_pdf():
         return jsonify({"text": text})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route("/api/scrape-job", methods=["POST"])
-def scrape_job():
-    data = request.get_json()
-    url = data.get("url", "").strip()
-    if not url:
-        return jsonify({"error": "No URL provided"}), 400
-    text = scrape_job_url(url)
-    return jsonify({"text": text})
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
