@@ -20,12 +20,10 @@
     .tab.active { color: #e6edf3; border-bottom-color: #58a6ff; }
     .tab:hover { color: #e6edf3; }
     .panel-body { padding: 1rem; }
+    .panel-header { padding: 10px 1rem; font-size: 13px; font-weight: 500; color: #e6edf3; border-bottom: 1px solid #30363d; }
+    .paste-tip { font-size: 12px; color: #8b949e; margin-bottom: 8px; line-height: 1.5; }
     textarea { width: 100%; height: 200px; background: transparent; border: none; color: #e6edf3; font-size: 13px; resize: vertical; font-family: inherit; line-height: 1.6; outline: none; }
-    .url-input { display: flex; gap: 8px; }
-    .url-input input { flex: 1; background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #e6edf3; font-size: 13px; outline: none; }
-    .url-input input:focus { border-color: #58a6ff; }
-    .fetch-btn { background: #21262d; border: 1px solid #30363d; color: #e6edf3; padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
-    .fetch-btn:hover { background: #30363d; }
+
 
     /* DROP ZONE */
     .drop-zone { border: 2px dashed #30363d; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; color: #8b949e; font-size: 13px; }
@@ -89,7 +87,7 @@
   <header>
     <div>
       <h1>SmartApply</h1>
-      <p>Upload your resume PDF and paste a job link — get an AI match score and cover letter</p>
+      <p>Upload your resume PDF and paste a job description — get an AI match score and cover letter</p>
     </div>
   </header>
 
@@ -121,21 +119,10 @@
 
       <!-- JOB PANEL -->
       <div class="input-panel">
-        <div class="panel-tabs">
-          <button class="tab active" onclick="switchTab('job', 'url', this)">Job URL</button>
-          <button class="tab" onclick="switchTab('job', 'paste', this)">Paste Text</button>
-        </div>
+        <div class="panel-header">Job Description</div>
         <div class="panel-body">
-          <div id="job-url">
-            <div class="url-input">
-              <input type="text" id="jobUrl" placeholder="https://jobs.company.com/posting/..." />
-              <button class="fetch-btn" onclick="fetchJob()">Fetch</button>
-            </div>
-            <div class="text-preview" id="jobPreview"></div>
-          </div>
-          <div id="job-paste" style="display:none;">
-            <textarea id="jobText" placeholder="Paste the job description here..."></textarea>
-          </div>
+          <div class="paste-tip">Copy and paste the full job description from any job board (LinkedIn, Greenhouse, Lever, etc.)</div>
+          <textarea id="jobText" placeholder="Paste the job description here..."></textarea>
         </div>
       </div>
 
@@ -200,25 +187,16 @@
   <script>
     // State
     let resumeMode = 'pdf';
-    let jobMode = 'url';
     let extractedResumeText = '';
-    let extractedJobText = '';
 
     // Tab switching
     function switchTab(panel, mode, el) {
       const tabs = el.parentElement.querySelectorAll('.tab');
       tabs.forEach(t => t.classList.remove('active'));
       el.classList.add('active');
-
-      if (panel === 'resume') {
-        resumeMode = mode;
-        document.getElementById('resume-pdf').style.display = mode === 'pdf' ? 'block' : 'none';
-        document.getElementById('resume-paste').style.display = mode === 'paste' ? 'block' : 'none';
-      } else {
-        jobMode = mode;
-        document.getElementById('job-url').style.display = mode === 'url' ? 'block' : 'none';
-        document.getElementById('job-paste').style.display = mode === 'paste' ? 'block' : 'none';
-      }
+      resumeMode = mode;
+      document.getElementById('resume-pdf').style.display = mode === 'pdf' ? 'block' : 'none';
+      document.getElementById('resume-paste').style.display = mode === 'paste' ? 'block' : 'none';
     }
 
     // Drag and drop
@@ -259,26 +237,7 @@
       } catch(e) { showError('Error extracting PDF: ' + e.message); }
     }
 
-    async function fetchJob() {
-      const url = document.getElementById('jobUrl').value.trim();
-      if (!url) { showError('Please enter a job posting URL.'); return; }
-      showStatus('Fetching job posting...');
-      try {
-        const res = await fetch('/api/scrape-job', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
-        });
-        const data = await res.json();
-        if (data.error) { showError(data.error); return; }
-        extractedJobText = data.text;
-        const preview = document.getElementById('jobPreview');
-        preview.style.display = 'block';
-        preview.textContent = data.text.substring(0, 300) + '...';
-        showStatus('Job posting fetched!');
-        setTimeout(() => showStatus(''), 2000);
-      } catch(e) { showError('Error fetching job: ' + e.message); }
-    }
+
 
     function getResume() {
       if (resumeMode === 'pdf') return extractedResumeText;
@@ -286,7 +245,6 @@
     }
 
     function getJob() {
-      if (jobMode === 'url') return extractedJobText;
       return document.getElementById('jobText').value.trim();
     }
 
@@ -294,7 +252,7 @@
       const resume = getResume();
       const job = getJob();
       if (!resume) { showError('Please upload your resume PDF or paste your resume text.'); return; }
-      if (!job) { showError('Please fetch a job URL or paste the job description.'); return; }
+      if (!job) { showError('Please paste the job description.'); return; }
 
       showStatus('Analyzing with Claude AI...');
       document.getElementById('results').style.display = 'none';
@@ -329,7 +287,7 @@
       const company = document.getElementById('company').value.trim() || 'the company';
       const role = document.getElementById('role').value.trim() || 'this role';
       if (!resume) { showError('Please upload your resume PDF or paste your resume text.'); return; }
-      if (!job) { showError('Please fetch a job URL or paste the job description.'); return; }
+      if (!job) { showError('Please paste the job description.'); return; }
 
       showStatus('Writing your cover letter...');
       document.getElementById('coverSection').style.display = 'none';
