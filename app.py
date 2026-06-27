@@ -7,11 +7,14 @@ from datetime import datetime
 from pypdf import PdfReader
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB upload limit
 
+# Requires ANTHROPIC_API_KEY in environment
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
+
 def call_claude(prompt):
+    """Send a prompt to Claude and return the text response."""
     if not ANTHROPIC_KEY:
         return "Set ANTHROPIC_API_KEY to enable AI features."
     headers = {
@@ -27,7 +30,9 @@ def call_claude(prompt):
     r = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
     return r.json()["content"][0]["text"]
 
+
 def extract_pdf_text(file_bytes):
+    """Extract plain text from all pages of a PDF."""
     reader = PdfReader(io.BytesIO(file_bytes))
     text = ""
     for page in reader.pages:
@@ -55,6 +60,7 @@ def extract_pdf():
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
+    """Score resume-to-job match and return keywords, strengths, and gaps."""
     data = request.get_json()
     resume = data.get("resume", "").strip()
     job_desc = data.get("job_description", "").strip()
@@ -87,6 +93,7 @@ Return raw JSON only (no markdown, no backticks):
 
 @app.route("/api/cover-letter", methods=["POST"])
 def cover_letter():
+    """Generate a tailored cover letter from resume and job description."""
     data = request.get_json()
     resume = data.get("resume", "").strip()
     job_desc = data.get("job_description", "").strip()
